@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'login_screen.dart';
+import 'profile_gate.dart';
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late final Stream<User?> authState = _auth.authStateChanges();
