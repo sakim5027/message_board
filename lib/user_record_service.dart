@@ -27,4 +27,12 @@ class UserRecordService {
 
     return document.exists;
   }
+
+  // Listen for changes to the user's Firestore profile.
+  Stream<DocumentSnapshot<Map<String, dynamic>>> watchUserRecord(User user) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots();
+  }
 }
