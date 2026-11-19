@@ -48,7 +48,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      // Step 1: Create Firebase Authentication account.
+      // Create Firebase Authentication account.
       // Do not register again if the account already exists.
       if (_createdUser == null) {
         final credential = await _auth.register(
@@ -68,7 +68,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         throw StateError('Please sign in to your new account before retrying.');
       }
 
-      // Step 2: Save user information to Firestore.
+      // Save user information to Firestore.
       // On retry, check whether the record already exists.
       bool recordExists = false;
 
@@ -87,7 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
 
-      // Step 3: Registration and profile save completed.
+      // Registration and profile save completed.
       // Return to AuthGate.
       if (mounted) {
         Navigator.pop(context);
