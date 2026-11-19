@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'board_service.dart';
 import 'message.dart';
+import 'auth_service.dart';
 
 class BoardScreen extends StatefulWidget {
   const BoardScreen({super.key, required this.user, required this.authorName});
@@ -20,6 +21,8 @@ class _BoardScreenState extends State<BoardScreen> {
 
   // Use BoardService for all Firestore operations.
   final BoardService _board = BoardService();
+
+  final AuthService _auth = AuthService();
 
   // Keep one stream instead of creating it in build().
   late Stream<List<Message>> _messages;
@@ -101,7 +104,28 @@ class _BoardScreenState extends State<BoardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Message Board')),
+      appBar: AppBar(
+        title: const Text('Message Board'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              try {
+                await _auth.signOut();
+                // AuthGate automatically returns to LoginScreen.
+              } on FirebaseAuthException {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Logout failed. Please try again.'),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
 
       body: Padding(
         padding: const EdgeInsets.all(20.0),
