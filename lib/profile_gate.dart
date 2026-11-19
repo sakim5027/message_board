@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'auth_service.dart';
 import 'user_record_service.dart';
+import 'board_screen.dart';
 
 class ProfileGate extends StatefulWidget {
   const ProfileGate({super.key, required this.user});
@@ -185,35 +186,13 @@ class _ProfileGateState extends State<ProfileGate> {
                 data['registrationDateTime'] is Timestamp;
 
             if (validProfile) {
-              // Profile exists and contains all required fields.
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Profile Verified!',
-                      style: TextStyle(fontSize: 24),
-                    ),
-                    const SizedBox(height: 20),
-                    Text('Welcome, ${data['firstName']}!'),
-                    const SizedBox(height: 12),
-                    Text('Email: ${widget.user.email}'),
-                    const SizedBox(height: 12),
-                    Text('Role: ${data['role']}'),
-                    const SizedBox(height: 20),
-                    const Text('Message Board will be added later.'),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _signOut,
-                      child: const Text('Logout'),
-                    ),
-                  ],
-                ),
+              // Profile is verified. Show the Message Board.
+              return BoardScreen(
+                user: widget.user,
+                authorName: '${data['firstName']} ${data['lastName']}',
               );
             }
 
-            // Existing profile is incomplete.
-            // Do not overwrite its registration timestamp.
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
