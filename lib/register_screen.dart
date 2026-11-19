@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'auth_service.dart';
+import 'user_record_service.dart';
 
 // RegisterScreen allows users to create an account.
 class RegisterScreen extends StatefulWidget {
@@ -14,18 +16,30 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // User information
+  final firstNameController = TextEditingController();
+  final lastNameController = TextEditingController();
+  final roleController = TextEditingController();
+
+  // Login information
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  // Use the professor's AuthService.
+  // Use the professor's services.
   final AuthService _auth = AuthService();
+  final UserRecordService _userRecord = UserRecordService();
 
   bool _isLoading = false;
   String _error = '';
 
+  // Remember the created account if the Firestore save fails.
+  User? _createdUser;
+
   Future<void> _signUp() async {
-    // Check form validation first.
-    if (_isLoading || !_formKey.currentState!.validate()) {
+    if (_isLoading) return;
+
+    // Validate only before creating the account.
+    if (_createdUser == null && !_formKey.currentState!.validate()) {
       return;
     }
 
@@ -35,14 +49,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      // Register with the professor's AuthService.
-      await _auth.register(
-        email: emailController.text,
-        password: passwordController.text,
-      );
+      // Step 1: Create Firebase Authentication account.
+      // Do not register again if the account already exists.
+      if (_createdUser == null) {
+        final credential = await _auth.register(
+          email: emailController.text,
+          password: passwordController.text,
+        );
 
-      // Firebase automatically signs in the new user.
-      // Return to AuthGate after successful registration.
+        if (credential.user == null) {
+          throw StateError('Registration returned no user.');
+        }
+
+        _createdUser = credential.user;
+      }
+
+      // Make sure the same user is still signed in.
+      if (_auth.currentUser?.uid != _createdUser!.uid) {
+        throw StateError('Please sign in to your new account before retrying.');
+      }
+
+      // Step 2: Save user information to Firestore.
+      // On retry, check whether the record already exists.
+      bool recordExists = false;
+
+      if (_createdUser != null) {
+        // A first save also uses this check to avoid
+        // overwriting an existing user document.
+        recordExists = await _userRecord.userRecordExists(_createdUser!.uid);
+      }
+
+      if (!recordExists) {
+        await _userRecord.saveUserRecord(
+          _createdUser!,
+          firstName: firstNameController.text.trim(),
+          lastName: lastNameController.text.trim(),
+          role: roleController.text.trim(),
+        );
+      }
+
+      // Step 3: Registration and profile save completed.
+      // Return to AuthGate.
       if (mounted) {
         Navigator.pop(context);
       }
@@ -57,10 +104,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
         } else if (e.code == 'invalid-email') {
           _error = 'Please enter a valid email.';
         } else if (e.code == 'network-request-failed') {
-          _error = 'Please check your internet connection.';
+          _error = 'Check your internet connection.';
         } else {
-          _error = 'Sign-up failed. Please try again.';
+          _error = 'Registration failed. Please try again.';
         }
+      });
+    } on FirebaseException catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = _createdUser != null
+            ? 'Account created, profile not saved. '
+                  'Please retry saving your profile.'
+            : 'Registration failed. Please try again.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = _createdUser != null
+            ? 'Profile could not be completed. '
+                  'Please retry or sign in to recover your profile.'
+            : 'Registration could not be confirmed. '
+                  'Please sign in to check your account.';
       });
     } finally {
       if (mounted) {
@@ -73,6 +139,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    firstNameController.dispose();
+    lastNameController.dispose();
+    roleController.dispose();
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -88,7 +157,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           key: _formKey,
           child: Column(
             children: [
-              const SizedBox(height: 80),
+              const SizedBox(height: 30),
 
               const Text(
                 'Create an Account',
@@ -97,9 +166,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 24),
 
-              // Email input
+              // First Name
+              TextFormField(
+                controller: firstNameController,
+                enabled: _createdUser == null,
+                decoration: const InputDecoration(
+                  labelText: 'First Name',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your first name.';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Last Name
+              TextFormField(
+                controller: lastNameController,
+                enabled: _createdUser == null,
+                decoration: const InputDecoration(
+                  labelText: 'Last Name',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your last name.';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Role
+              TextFormField(
+                controller: roleController,
+                enabled: _createdUser == null,
+                decoration: const InputDecoration(
+                  labelText: 'Role',
+                  hintText: 'e.g., student',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your role.';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Email
               TextFormField(
                 controller: emailController,
+                enabled: _createdUser == null,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
                   labelText: 'Email',
@@ -121,9 +246,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 16),
 
-              // Password input
+              // Password
               TextFormField(
                 controller: passwordController,
+                enabled: _createdUser == null,
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Password',
@@ -144,16 +270,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 16),
 
-              // Show error message
+              // Display error message
               if (_error.isNotEmpty)
                 Text(_error, style: const TextStyle(color: Colors.red)),
 
               const SizedBox(height: 20),
 
-              // Sign Up button
+              // Register or retry saving the profile
               ElevatedButton(
                 onPressed: _isLoading ? null : _signUp,
-                child: Text(_isLoading ? 'Registering...' : 'Sign Up'),
+                child: Text(
+                  _isLoading
+                      ? 'Processing...'
+                      : _createdUser != null
+                      ? 'Retry Save Profile'
+                      : 'Sign Up',
+                ),
               ),
             ],
           ),

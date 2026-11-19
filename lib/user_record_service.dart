@@ -17,4 +17,14 @@ class UserRecordService {
       'registrationDateTime': FieldValue.serverTimestamp(),
     });
   }
+
+  // Check whether this user already has a Firestore record.
+  Future<bool> userRecordExists(String uid) async {
+    final document = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get(const GetOptions(source: Source.server));
+
+    return document.exists;
+  }
 }
