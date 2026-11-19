@@ -132,6 +132,14 @@ class _BoardScreenState extends State<BoardScreen> {
 
         child: Column(
           children: [
+            // Welcome message for the signed-in user
+            Text(
+              'Hello ${widget.authorName}! \nWelcome to Message Board!',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 20),
             // Message input
             TextField(
               controller: messageController,
