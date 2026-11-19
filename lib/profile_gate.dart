@@ -104,21 +104,6 @@ class _ProfileGateState extends State<ProfileGate> {
     }
   }
 
-  // Sign out using AuthService.
-  Future<void> _signOut() async {
-    try {
-      await _auth.signOut();
-
-      // AuthGate automatically returns to LoginScreen.
-    } on FirebaseAuthException {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logout failed. Please try again.')),
-      );
-    }
-  }
-
   @override
   void dispose() {
     firstNameController.dispose();
