@@ -130,12 +130,6 @@ class _ProfileGateState extends State<ProfileGate> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Message Board'),
-        actions: [
-          IconButton(onPressed: _signOut, icon: const Icon(Icons.logout)),
-        ],
-      ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: _profileStream,
         builder: (context, snapshot) {
