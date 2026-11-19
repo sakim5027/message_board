@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import 'auth_service.dart';
 import 'user_record_service.dart';
@@ -109,7 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _error = 'Registration failed. Please try again.';
         }
       });
-    } on FirebaseException catch (e) {
+    } on FirebaseException {
       if (!mounted) return;
 
       setState(() {
