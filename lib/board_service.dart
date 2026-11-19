@@ -30,6 +30,7 @@ class BoardService {
     return _db.collection('messages').orderBy('createdAt').snapshots().map((
       snapshot,
     ) {
+      //converts each Firestore document into a Message object
       return snapshot.docs.map((doc) {
         final data = doc.data();
 
