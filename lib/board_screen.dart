@@ -347,6 +347,29 @@ class _BoardScreenState extends State<BoardScreen> {
                                   color: Colors.grey,
                                 ),
                               ),
+
+                              const SizedBox(height: 8),
+
+                              // Only the author can see Edit and Delete buttons.
+                              if (message.authorUid == widget.user.uid)
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    // Edit button
+                                    TextButton.icon(
+                                      onPressed: () => _editMessage(message),
+                                      icon: const Icon(Icons.edit),
+                                      label: const Text('Edit'),
+                                    ),
+
+                                    // Delete button
+                                    TextButton.icon(
+                                      onPressed: () => _deleteMessage(message),
+                                      icon: const Icon(Icons.delete),
+                                      label: const Text('Delete'),
+                                    ),
+                                  ],
+                                ),
                             ],
                           ),
                         ),
