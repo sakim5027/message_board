@@ -95,6 +95,73 @@ class _BoardScreenState extends State<BoardScreen> {
     }
   }
 
+  // UPDATE: Edit my own message.
+  Future<void> _editMessage(Message message) async {
+    final editController = TextEditingController(text: message.text);
+
+    // Ask the user for the updated message.
+    final newText = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit Message'),
+          content: TextField(
+            controller: editController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Message',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, editController.text.trim());
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    editController.dispose();
+
+    if (!mounted || newText == null) return;
+
+    // Do not allow empty messages.
+    if (newText.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Message cannot be empty.')));
+      return;
+    }
+
+    try {
+      // Use the professor's BoardService.
+      await _board.editMessage(messageId: message.id, newText: newText);
+
+      // StreamBuilder automatically updates the list.
+    } on FirebaseException catch (e) {
+      if (!mounted) return;
+
+      String errorMessage = 'Could not edit message. Please try again.';
+
+      if (e.code == 'permission-denied') {
+        errorMessage = 'You can only edit your own messages.';
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(errorMessage)));
+    }
+  }
+
   @override
   void dispose() {
     messageController.dispose();
