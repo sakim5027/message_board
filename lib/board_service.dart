@@ -46,16 +46,19 @@ class BoardService {
     });
   }
 
-  // UPDATE
-  Future<void> updateMessage({
+  /// UPDATE — own message only (rules enforce it)
+  Future<void> editMessage({
     required String messageId,
-    required String text,
+    required String newText,
   }) async {
-    throw UnimplementedError();
+    await _db.collection('messages').doc(messageId).update({
+      'text': newText,
+      'editedAt': FieldValue.serverTimestamp(),
+    });
   }
 
-  // DELETE
+  /// DELETE — own message only (rules enforce it)
   Future<void> deleteMessage({required String messageId}) async {
-    throw UnimplementedError();
+    await _db.collection('messages').doc(messageId).delete();
   }
 }
