@@ -162,6 +162,55 @@ class _BoardScreenState extends State<BoardScreen> {
     }
   }
 
+  // DELETE: Delete my own message.
+  Future<void> _deleteMessage(Message message) async {
+    // Ask the user to confirm deletion.
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Message'),
+          content: const Text('Are you sure you want to delete this message?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // Stop if the user cancels.
+    if (!mounted || confirm != true) return;
+
+    try {
+      // Use the professor's BoardService.
+      await _board.deleteMessage(messageId: message.id);
+
+      // StreamBuilder automatically removes the message.
+    } on FirebaseException catch (e) {
+      if (!mounted) return;
+
+      String errorMessage = 'Could not delete message. Please try again.';
+
+      if (e.code == 'permission-denied') {
+        errorMessage = 'You can only delete your own messages.';
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(errorMessage)));
+    }
+  }
+
   @override
   void dispose() {
     messageController.dispose();
