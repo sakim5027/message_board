@@ -125,10 +125,7 @@ class _BoardScreenState extends State<BoardScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  editedText.trim(),
-                );
+                Navigator.pop(dialogContext, editedText.trim());
               },
               child: const Text('Save'),
             ),
@@ -141,23 +138,17 @@ class _BoardScreenState extends State<BoardScreen> {
 
     // Do not allow empty messages.
     if (newText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Message cannot be empty.'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Message cannot be empty.')));
       return;
     }
 
     try {
       // Use the professor's BoardService.
-      await _board.editMessage(
-        messageId: message.id,
-        newText: newText,
-      );
+      await _board.editMessage(messageId: message.id, newText: newText);
 
       // StreamBuilder automatically updates the list.
-
     } on FirebaseException catch (e) {
       if (!mounted) return;
 
@@ -167,12 +158,10 @@ class _BoardScreenState extends State<BoardScreen> {
         errorMessage = 'You can only edit your own messages.';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(errorMessage)));
     }
   }
-
 
   // DELETE: Delete my own message.
   Future<void> _deleteMessage(Message message) async {
