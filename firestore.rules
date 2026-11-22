@@ -1,0 +1,88 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // USER PROFILES
+    match /users/{uid} {
+
+      allow get: if request.auth != null
+                 && request.auth.uid == uid;
+
+      allow list: if false;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.keys().hasOnly([
+                      'uid',
+                      'firstName',
+                      'lastName',
+                      'role',
+                      'registrationDateTime'
+                    ])
+                    && request.resource.data.keys().hasAll([
+                      'uid',
+                      'firstName',
+                      'lastName',
+                      'role',
+                      'registrationDateTime'
+                    ])
+                    && request.resource.data.uid == uid
+                    && request.resource.data.firstName is string
+                    && request.resource.data.firstName.size() > 0
+                    && request.resource.data.lastName is string
+                    && request.resource.data.lastName.size() > 0
+                    && request.resource.data.role is string
+                    && request.resource.data.role.size() > 0
+                    && request.resource.data.registrationDateTime
+                       == request.time;
+
+      allow update, delete: if false;
+    }
+
+    // MESSAGES
+    match /messages/{msgId} {
+
+      // Signed-in users can read messages.
+      allow read: if request.auth != null;
+
+      // CREATE
+      allow create: if request.auth != null
+                    && request.resource.data.authorUid == request.auth.uid
+                    && request.resource.data.keys().hasOnly([
+                      'authorUid',
+                      'authorName',
+                      'text',
+                      'createdAt',
+                      'editedAt'
+                    ])
+                    && request.resource.data.keys().hasAll([
+                      'authorUid',
+                      'authorName',
+                      'text',
+                      'createdAt',
+                      'editedAt'
+                    ])
+                    && request.resource.data.authorName is string
+                    && request.resource.data.authorName.size() > 0
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.editedAt == null;
+
+      // UPDATE
+      allow update: if request.auth != null
+                    && resource.data.authorUid == request.auth.uid
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['text', 'editedAt'])
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.editedAt == request.time;
+
+      // DELETE
+      allow delete: if request.auth != null
+                    && resource.data.authorUid == request.auth.uid;
+    }
+  }
+}
