@@ -5,23 +5,55 @@ import 'message.dart';
 class BoardService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  // Generate one ID for each new message operation.
+  String newMessageId() {
+    return _db.collection('messages').doc().id;
+  }
+
   // CREATE — Add a new message.
   Future<void> postMessage({
+    required String messageId,
     required String authorUid,
     required String authorName,
     required String text,
   }) async {
-    // Do not allow an empty message.
-    if (text.trim().isEmpty) {
-      throw ArgumentError('Message cannot be empty.');
+    final cleanText = text.trim();
+
+    // Reject invalid messages.
+    if (cleanText.isEmpty) {
+      throw Exception('Message cannot be empty.');
     }
 
-    await _db.collection('messages').add({
-      'authorUid': authorUid,
-      'authorName': authorName,
-      'text': text.trim(),
-      'createdAt': FieldValue.serverTimestamp(),
-      'editedAt': null,
+    // Use the same document ID for every retry.
+    final messageRef = _db.collection('messages').doc(messageId);
+
+    await _db.runTransaction((transaction) async {
+      // Check whether this message already exists.
+      final snapshot = await transaction.get(messageRef);
+
+      if (snapshot.exists) {
+        final savedMessage = snapshot.data()!;
+
+        // Avoid accidentally treating a different
+        // message as the same operation.
+        if (savedMessage['authorUid'] != authorUid ||
+            savedMessage['authorName'] != authorName ||
+            savedMessage['text'] != cleanText) {
+          throw StateError('Message ID already used.');
+        }
+
+        // Message already exists. Do not create it again.
+        return;
+      }
+
+      // Create the message only if it does not exist.
+      transaction.set(messageRef, {
+        'authorUid': authorUid,
+        'authorName': authorName,
+        'text': cleanText,
+        'createdAt': FieldValue.serverTimestamp(),
+        'editedAt': null,
+      });
     });
   }
 

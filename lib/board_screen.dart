@@ -29,6 +29,11 @@ class _BoardScreenState extends State<BoardScreen> {
   late Stream<List<Message>> _messages;
 
   bool _isPosting = false;
+
+  // Keep the same ID and text if a post needs a retry.
+  String? _pendingMessageId;
+  String? _pendingMessageText;
+
   String _error = '';
 
   // Firebase Cloud Messaging
@@ -46,53 +51,55 @@ class _BoardScreenState extends State<BoardScreen> {
 
   // CREATE: Post a new message.
   Future<void> _postMessage() async {
+    // Prevent overlapping taps.
     if (_isPosting) return;
 
-    final text = messageController.text.trim();
+    // Reuse the original text when retrying.
+    final text = _pendingMessageText ?? messageController.text.trim();
 
-    // Do not allow empty messages.
     if (text.isEmpty) {
-      setState(() {
-        _error = 'Please enter a message.';
-      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a message.')));
       return;
     }
 
+    // Generate an ID once, then reuse it for retries.
+    _pendingMessageId ??= _board.newMessageId();
+    _pendingMessageText ??= text;
+
+    final messageId = _pendingMessageId!;
+
     setState(() {
       _isPosting = true;
-      _error = '';
     });
 
     try {
-      // Call BoardService instead of Firestore directly.
       await _board.postMessage(
+        messageId: messageId,
         authorUid: widget.user.uid,
         authorName: widget.authorName,
         text: text,
       );
 
+      // The operation completed successfully.
+      _pendingMessageId = null;
+      _pendingMessageText = null;
+
       if (!mounted) return;
 
-      // Clear the input after posting successfully.
-      messageController.clear();
-    } on FirebaseException catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        if (e.code == 'permission-denied') {
-          _error = 'Permission denied. Check Firestore rules.';
-        } else if (e.code == 'unavailable') {
-          _error = 'Firestore is unavailable. Try again later.';
-        } else {
-          _error = 'Could not post message. Please try again.';
-        }
-      });
+      if (messageController.text.trim() == text) {
+        messageController.clear();
+      }
     } catch (e) {
       if (!mounted) return;
 
-      setState(() {
-        _error = 'Could not post message. Please try again.';
-      });
+      // Keep the same message ID for the next retry.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not post message. Tap Post to retry.'),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
