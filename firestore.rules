@@ -84,5 +84,43 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && resource.data.authorUid == request.auth.uid;
     }
+
+
+    // PRIVATE FCM TOKENS
+
+    match /users/{uid}/private/{docId} {
+
+      // Only the owner can read their FCM token.
+      allow get: if request.auth != null
+                 && request.auth.uid == uid
+                 && docId == 'fcm';
+
+      // Do not allow listing private documents.
+      allow list: if false;
+
+      // Only the owner can create or update
+      // their FCM token document.
+      allow create, update: if request.auth != null
+                            && request.auth.uid == uid
+                            && docId == 'fcm'
+                            && request.resource.data.keys().hasOnly([
+                              'installationId',
+                              'updatedAt'
+                            ])
+                            && request.resource.data.keys().hasAll([
+                              'installationId',
+                              'updatedAt'
+                            ])
+                            && request.resource.data.installationId is string
+                            && request.resource.data.installationId.size() > 0
+                            && request.resource.data.updatedAt
+                               == request.time;
+
+      // Allow the owner to remove their token.
+      allow delete: if request.auth != null
+                    && request.auth.uid == uid
+                    && docId == 'fcm';
+    }
+
   }
 }

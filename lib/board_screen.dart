@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'board_service.dart';
 import 'message.dart';
 import 'auth_service.dart';
+import 'notification_service.dart';
 
 class BoardScreen extends StatefulWidget {
   const BoardScreen({super.key, required this.user, required this.authorName});
@@ -29,6 +30,12 @@ class _BoardScreenState extends State<BoardScreen> {
 
   bool _isPosting = false;
   String _error = '';
+
+  // Firebase Cloud Messaging
+  final NotificationService _notificationService = NotificationService();
+
+  bool _isEnablingNotifications = false;
+  String _notificationMessage = '';
 
   @override
   void initState() {
@@ -90,6 +97,39 @@ class _BoardScreenState extends State<BoardScreen> {
       if (mounted) {
         setState(() {
           _isPosting = false;
+        });
+      }
+    }
+  }
+
+  // Ask for notification permission only when the user clicks the button.
+  Future<void> _enableNotifications() async {
+    if (_isEnablingNotifications) return;
+
+    setState(() {
+      _isEnablingNotifications = true;
+      _notificationMessage = '';
+    });
+
+    try {
+      // Request permission and register only after consent.
+      final result = await _notificationService.enableNotifications();
+
+      if (!mounted) return;
+
+      setState(() {
+        _notificationMessage = result;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _notificationMessage = 'Notifications could not be enabled.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isEnablingNotifications = false;
         });
       }
     }
@@ -255,6 +295,41 @@ class _BoardScreenState extends State<BoardScreen> {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
+
+            const SizedBox(height: 16),
+
+            // Optional notification permission
+            const Text(
+              'Message Board Notifications',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 8),
+
+            const Text(
+              'Notifications are optional. '
+              'You can use the Message Board without enabling them.',
+            ),
+
+            const SizedBox(height: 10),
+
+            ElevatedButton.icon(
+              onPressed: _isEnablingNotifications ? null : _enableNotifications,
+              icon: const Icon(Icons.notifications),
+              label: Text(
+                _isEnablingNotifications
+                    ? 'Enabling...'
+                    : 'Enable Notifications',
+              ),
+            ),
+
+            if (_notificationMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(_notificationMessage),
+              ),
+
+            const SizedBox(height: 16),
 
             const SizedBox(height: 20),
             // Message input
